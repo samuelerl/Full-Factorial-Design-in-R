@@ -1,0 +1,317 @@
+---
+title: "Factorial Design Project"
+author: "Samuel Erlikhman"
+date: "2025-06-11"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(knitr)
+set.seed(06112025)
+```
+
+
+**Introduction**
+The study of aerodynamics has been an interesting field of study for over a century. From commercial aviation to spacecraft, the underlying principles or flight have remained the same. Luckily, we are able to observe these principles using everyday materials, such as paper airplanes. While they are associated with a child's toy, they will provide a useful platform for testing controlled factorial experimental designs. 
+
+From the engineering standpoint, full factorial designs are useful, as they allow for simultaneous assessment of multiple factors. This is employed well by the National Advisory Committee for Aeronautics (NACA). In their study (a bit dated, but still relevant), they used factorial designs to assess how variations of aircraft mass distribution influenced lateral stability and control characteristics (Campell & Seacord, 1943). They concluded that increasing the rolling and yawing moments significantly affected stability and the aircraft's response to gust winds - which played a large role in the design of stable and comfortable aircraft. Although the experiment was conducted in a wind tunnel, with scaled models of aircraft, the broader principle, that the design of the aircraft can affect flight performance, can be applied to a paper airplane.
+
+More recent studies have also used paper airplanes to assess the effects of design on flight performance. For example, Cook (2017) completed analysis of various paper airplane designs to understand which characteristics of the design most influenced flight distance and flight time. By changing different parameters, she demonstrated that factors like deeper fuselages significantly improved stability of the aircraft - in turn, increasing flight distance and making the airplane more stable. 
+
+
+Similarly, Puspita et al. (2019) used a mixed-level factorial design to understand how paper weight, length, and nose shape affected flight distance. By running an ANOVA analysis, they showed significant effects of interactions, specifically between nose shape and paper length. Such studies demonstrate the importance of factorial designs. It is much more logical, practical, and less costly to study multiple factors at once, than testing one variable at a time.
+
+Furthermore, Hasibuzzaman and Hasan (2022) conducted a study on computational fluid dynamics (CFD) of different paper airplane models, including the world-record setting "Susanne" design. Their research showed that design features, such as a positive dihedral angle, as well as a forward-shifted center of mass resulted in improved stability of the airplane, yielding a longer flight time/distance.
+
+Building on these studies, we will conduct a full factorial design to assess how the following factors affect flight distance of paper airplanes: the placement of paper clips on the nose, middle, and rear of the airplane. Each factor has two levels, either the paper clip on the airplane or not. The response variable will be the distance the airplane flies, measured in inches. This design lets us understand how the placement of paper clips affects flight distance, and whether there are any interactions between the factors. The overall goal is to understand how the distribution of mass affects flight distance. This will let us contextualize our findings within the findings of other studies in this field.
+
+**Methods**
+
+This study employs a $2^3$ full factorial design. The three binary factors considered are: A (Nose): The presence (1) or absence (0) of a paper clip at the nose of the plane. B (Middle): The presence (1) or absence (0) of a paper clip in the middle of the plane. C (Tail): The presence (1) or absence (0) of a paper clip at the tail of the plane. The response variable is the distance the airplane flies, measured in inches. As each factor had two levels, this results in $2^3 = 8$ treatment combinations. The distance was measured from release point to landing point, using a tape measure which was placed and not retracted throughout the study. To minimize variability, one airplane was used; however, two identical extra ones were made, in case of damage. Each were constructed using standard white printer paper (8.5" x 11"). The design followed a method from Cook's paper (2017), which presented optimal flight configurations. The "Hunting Flight" method is from the website, www.foldnfly.com, and presents a medium difficulty construction, given a short body length and a heavy nose. The website claimed that a 10 year old can throw it an average of 33.6 feet - my data was nowhere near this! All throws were conducted by myself, inside my apartment, to reduce environmental confounding factors. Perhaps when collecting this data, the child was throwing in strong wind, or, I am a terrible thrower.
+
+Here, you can see the setup up the experiment. I have laid down a tape measure, and am throwing the airplane from a fixed point. There are three airplanes made, but only the one labeled "1" is used throughout the study. As predicted, the airplane was damaged by the end of the experiment, with the nose bent, and the paper clip scratching the paper each time I moved it.
+
+\begin{center}
+\includegraphics[width=0.5\textwidth]{airplane_description.jpeg}
+\end{center}
+
+\begin{center}
+\includegraphics[width=0.5\textwidth]{airplanes.jpeg}
+\end{center}
+
+\begin{center}
+\includegraphics[width=0.5\textwidth]{setup.jpeg}
+\end{center}
+
+Let's first take a look at the pilot study and determination of sample size. The pilot study determined that there would be 24 trials - with each of the eight treatment combinations replicated, at random, three times. The randomization was determined using a Python script. The `generate_random_design` function creates a randomized full-factorial experiment and writes the output to an Excel file. It takes a dictionary of factors with their levels, the number of replicates, and the output file path as inputs. The function generates all possible permutations, replicates them, randomizes the order, and adds a sequential run order. A separate `Distance` column is added to the Excel file, which allows me to go back and input the distance of each flight. The randomization is achieved with `sample` function, and saved to Excel using the `openpyxl` engine. All scripts were executed on a MacBook Pro Model A2338. Python version 3.11, PyCharm Build #PY-251.23774.444, Pandas v1.4.2, v8.6.0, NumPy v1.26.4. 
+
+Following the collection of the distance, the data was imported to R, and analyzed using the `lm` function. The resulting ANOVA table gave us two quantities of interest: the Mean Square Error (MSE), which is an estimate of the within-group variance, and the overall variability between treatment means. MSE was estimated to be 88.625. To find a meaningful sample size, we used the `power_factorial_23` function, which takes the beta coefficients and standard errors from the ANOVA table, and calculates the power of the test. The function uses a Monte Carlo simulation to estimate power, by generating random samples from a normal distribution with the given means and standard deviations. The function then runs a linear model on each sample and checks if the p-value is less than $\alpha =  0.05$. The number of times this occurs is divided by the total number of iterations to get the estimated power. This yielded approximately 7 replicates per treatment group, with approximately 80% power, at $\alpha=0.05$. While this is much more collected data than the pilot, the pilot allowed us to understand the test and refine the measurement process. As the data makes use of ANOVA and linear modeling, we need the following assumptions to be met: the independence of observations, the normality of residuals, and for the groups to have equal variances. It is likely that the assumptions were satisfied - the throws were independent from each other as they were randomized, and the distance was measured using a tape measure. We will prove this statistically later on. 
+
+Since we have 3 factors, we need to model each of them and their interactions. This will be done using the `lm` function, which fits a linear model to the data. We will then analyze the p-values for each predictor, and the overall model. The p-values will be used to determine if the predictors are significant, and if the model is a good fit for the data. The p-values will be adjusted using the Bonferroni correction, as we are conducting multiple tests. The Bonferroni correction is a method to control for Type I error, by dividing the significance level by the number of tests. This will help us avoid false positives in our analysis. We will also check our data for normality by plotting a histogram of our residuals, a Q-Q plot of the residuals, run a Shaprio-Wilk test, check if there's structure to the data, and check if there is equal variance. If assumptions are not met, we will perform a permutation test to check if the p-values are significant. The permutation test is a non-parametric test that does not assume normality or equal variance. It works by randomly permuting the data and calculating the test statistic for each permutation. The p-value is then calculated as the proportion of permutations that yield a test statistic as extreme as the observed one.
+
+The following technical issues may have affected the results: first, the `sample` function is based on an algorithm, and is pseudorandom - presenting us with possibly flawed randomization. Second, the pilot study and the full study were conducted at different times, although in the same location, which may have yielded different results. The temperature in the room was different, as well as any windows that were opened may have caused a breeze, affecting results. Third, as I was the one who was conducting the throwing, and may have gotten tired towards the last throws, yielding inconsistency in force for throw. Fourth, each throw was independent, but each throw damaged the airplane or the tape measure may have been slightly moved. While conducting the pilot test, I had severe allergies and was not feeling well, so my throws may have been less strong than during the real study. The paper clips were perhaps not the same from the pilot study and the real study - I selected the ones that caught my hand from a box of 100 paper clips. Also, my measurements were not 100\% accurate - I rounded to the nearest inch and counted the distance of where the nose was, which may have impacted the data. Lastly, the paper clip placement on the plane varied by a few millimeters each throw, also possibly leading to inconsistency, and it was put on the plane at different angles.
+
+**Results**
+
+First, we need to use our pilot study's data to determine the sample size. We ran 3 replicates of each combination as we have 8 factors, so $3 \times 8 = 24$ trials. The data was collected in a random order, and the distance was measured from the release point to the landing point. The data was then imported to R, and analyzed using the `lm` function. The resulting ANOVA table gave us two quantities of interest: the Mean Square Error (MSE), which is an estimate of the within-group variance, and the overall variability between treatment means. MSE was estimated to be 88.625. To find a meaningful sample size, we used the `power_factorial_23` function, which takes the beta coefficients and standard errors from the ANOVA table, and calculates the power of the test. The function uses a Monte Carlo simulation to estimate power, by generating random samples from a normal distribution with the given means and standard deviations. The function then runs a linear model on each sample and checks if the p-value is less than $\alpha =  0.05$. The number of times this occurs is divided by the total number of iterations to get the estimated power. This yielded approximately 7 replicates per treatment group, with approximately 80% power, at $\alpha=0.05$.
+
+Here is the Python script used to generate a fill-in Excel file. 
+
+```
+import pandas as pd
+import itertools
+import numpy as np
+
+
+def generate_random_design(factors, n_reps=1, out_file="design.xlsx", sheet_name="Design"):
+    """
+    Generate a randomized full‐factorial design and write to Excel.
+
+    Parameters
+    ----------
+    factors : dict
+        A dict mapping factor names to lists of levels, e.g.
+        {"Nose": ["Yes", "No"], "Middle": ["Yes", "No"], "Rear": ["Yes", "No"]}
+    n_reps : int, default 1
+        Number of replicates per treatment combination.
+    out_file : str, default "design.xlsx"
+        Path to output Excel file.
+    sheet_name : str, default "Design"
+        Name of the sheet in the Excel file.
+
+    Returns
+    -------
+    pd.DataFrame
+        The randomized design (invisibly returned).
+    """
+    level_lists = [factors[f] for f in factors]
+    combos = list(itertools.product(*level_lists))
+    df = pd.DataFrame(combos, columns=list(factors.keys()))
+    df = pd.concat([df] * n_reps, ignore_index=True)
+    df = df.sample(frac=1, random_state=None).reset_index(drop=True)
+    df.insert(0, "RunOrder", range(1, len(df) + 1))
+    df["Distance"] = ""
+    with pd.ExcelWriter(out_file, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+    print(f"Design written to: {out_file}")
+    return df
+
+if __name__ == "__main__":
+    my_factors = {
+        "Nose": ["Yes", "No"],
+        "Middle": ["Yes", "No"],
+        "Rear": ["Yes", "No"]
+    }
+    design_df = generate_random_design(my_factors, n_reps=7, out_file="/Users/serlikhm/Library/CloudStorage/OneDrive-Personal/Microsoft Word/School/UCSB/Spring 2025/PSTAT 122/Final Project/paper_airplanes_real_study.xlsx")
+    print(design_df.head())
+```
+
+Let's import the data, and run the `lm` function to get the MSE and between-group variance.
+```{r}
+pilot <- read_excel('paper_airplanes_pilot_study.xlsx')
+source("power_factorial_23.R")
+
+pilot$Nose <- as.factor(pilot$Nose)
+pilot$Middle <- as.factor(pilot$Middle)
+pilot$Rear <- as.factor(pilot$Rear)
+
+model <- lm(Distance ~ Nose * Middle * Rear, data = pilot)
+output <- signif(summary(model)$coefficients, 3)
+output[,] <- as.character(output[,])
+kable(output)
+anova_output <- anova(model)
+mse <- anova_output["Residuals", "Mean Sq"]
+
+group_means <- pilot %>%
+  group_by(Nose, Middle, Rear) %>%
+  summarise(meanDist = mean(Distance), .groups="drop")
+between.var <- var(group_means$meanDist)
+
+
+beta_mean <- as.numeric(coef(model))
+beta_se   <- summary(model)$coefficients[, "Std. Error"]
+
+power_calculation <- power_factorial_23(beta_mean, beta_se, 
+                                        replicates = 7, iter=1000, alpha=0.05)
+```
+
+Our power results in `r power_calculation * 100`\%. Since our model is driven by the intercept, given the value is `r output[1, 1]`, which is so large compared to the other predictors, it might be a good idea to try and vary it, as our sample size may not large enough to estimate the variance of the intercept. So, let's try to do as such.
+
+```{r}
+beta_mean_orig <- as.numeric(coef(model))
+beta_se <- summary(model)$coefficients[, "Std. Error"]
+intercepts <- c(10, 66.667, 100)
+replicates <- 2:10
+
+power_mat  <- matrix(NA, nrow = length(replicates), ncol = length(intercepts))
+
+for (j in seq_along(intercepts)) {
+  beta_test <- beta_mean_orig
+  beta_test[1] <- intercepts[j]
+  
+  for (i in seq_along(replicates)) {
+    power_mat[i, j] <- power_factorial_23(
+      beta_test,
+      beta_se,
+      replicates = replicates[i]
+    )
+  }
+}
+
+df <- data.frame(
+  replicates = rep(replicates, times = length(intercepts)),
+  intercept  = factor(
+    rep(intercepts, each = length(replicates)),
+    levels = intercepts
+  ),
+  power      = as.vector(power_mat)
+)
+
+ggplot(df, aes(x = replicates, y = power, color = intercept)) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    title = "Power vs. Number of Replicates by Intercept Value",
+    x     = "Number of Replicates",
+    y     = "Power",
+    color = "Intercept"
+  )
+
+```
+Here, we can see that the power increases with the number of replicates, and that the intercept value (even though it's our greatest predictor) does not significantly affect the power. This is a good sign, as it means that our sample size is sufficient to detect effects in our $2^3$ Factorial design. Let us proceed with the full study.
+
+Here is an example of our data:
+```{r}
+full <- read_excel('paper_airplanes_real_study.xlsx')
+kable(head(full))
+```
+
+
+Let's make a graphical representation of it. We need to make factors out of our data, and then plot it.
+```{r, fig.show="hold", out.width="50%", message=FALSE}
+full$A <- factor(full$Nose, levels = c("No", "Yes"))
+full$B <- factor(full$Middle, levels = c("No", "Yes"))
+full$C <- factor(full$Rear, levels = c("No", "Yes"))
+
+theme_update(text = element_text(size = 15))
+ggplot(data = full, mapping = aes(x = A, y = Distance, color = B)) +
+  geom_jitter(width = 0.08, height = 0) +
+  facet_grid(cols = vars(C),
+             labeller = labeller(C = c("No" = "Rear = No", "Yes" = "Rear = Yes"))) +
+  ggtitle("Flight Distance and Weight Distribution") +
+  scale_x_discrete(name = "Nose (A)", labels = c("No", "Yes")) +
+  scale_color_discrete(name = "Middle (B)", labels = c("No", "Yes")) + 
+  scale_y_continuous(name = "Distance (in)") 
+
+tmp_df <- full %>%
+  group_by(A, B, C) %>%
+  summarize(mean_dist = mean(Distance), .groups = "drop")
+
+ggplot(tmp_df, aes(x = B, y = mean_dist, group = A, color = A)) +
+  geom_line() + geom_point() +
+  facet_wrap(~ C, labeller = labeller(C = c("No" = "Rear = No", "Yes" = "Rear = Yes"))) +
+  labs(
+    title = "Mean Distance by Nose and Middle Factors",
+    x = "Middle (B)",
+    y = "Mean Distance (in)",
+    color = "Nose (A)"
+  )
+```
+Looking at the first graph, we see that there is a slight difference between the means of distance. However, it is clear that for both Rear No and rear Yes, the distance is greater when the paper clip is placed on the nose. This is a good sign, as it means that the mass distribution is affecting the flight distance. The most consistent data points seem to be when all the paper clips or none of the paper clips are on the plane. Looking at the second graph, we see that mean distance seems to change due to the middle paper clip. If rear is no, the middle paper clip increases distance (as weight shifts forward) for both nose yes and no, but if it is just the middle paper clip, we see it negatively impacts distance.
+
+Now, let's analyze our data. Since we have 3 factors, we need to model each of them and their interactions. Our linear model is: $y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \beta_3x_3 + \beta_4x_1x_2 + \beta_5x_1x_3 + \beta_6x_2x_3 + \beta_7x_1x_2x_3$, where $y$ is the distance, $x_i$ are the factors, $\beta_i$ are the coefficients. 
+ 
+```{r}
+model <- lm(Distance ~ Nose * Middle * Rear, data = full)
+kable(summary(model)$coefficients, digits = 3)
+```
+
+Our null and alternative hypothesis:
+$$
+\begin{aligned}
+H_0 &: \beta_1 = \beta_2 = \beta_3 \\
+H_A &: \text{At least one effect is different}
+\end{aligned}
+$$
+
+Where $\beta_1$ is the effect of the nose paper clip, $\beta_2$ is the effect of the middle paper clip, and $\beta_3$ is the effect of the rear paper clip. We will be testing $H_0$ at $\alpha=0.05$. Since the model's overall p-value is `r round(with(summary(model), pf(fstatistic[1], fstatistic[2], fstatistic[3], lower.tail = FALSE)), 3)`, which is less than 0.05, we reject the null hypothesis, meaning the model is statistically significant. However, we see there are different p-values for each of the predictors. Before utilizing them, we need to adjust them for the Bonferroni correction, as we are conducting multiple tests. The Bonferroni correction is a method to control for Type I error, by dividing the significance level by the number of tests. In our case, we have 7 predictors, so we will divide our significance level by 7. So, $\alpha = \frac{0.05}{7} = 0.00714$. So, we see that the p-value for $\beta_1$, which represents a paper clip on the nose, is `r round(summary(model)$coefficients[2,4], 3)`, which is greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the nose paper clip has an effect. The p-value for $\beta_2$, which represents a paper clip in the middle, is `r round(summary(model)$coefficients[3,4], 3)`, which is also greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the middle paper clip has an effect. The p-value for $\beta_3$, which represents a paper clip at the rear, is `r round(summary(model)$coefficients[4,4], 3)`, which is also greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the rear paper clip has an effect. The p-value for $\beta_4$, which represents the interaction between the nose and middle paper clips, is `r round(summary(model)$coefficients[5,4], 3)`, which is also greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the interaction between the nose and middle paper clips has an effect. The p-value for $\beta_5$, which represents the interaction between the nose and rear paper clips, is `r round(summary(model)$coefficients[6,4], 3)`, which is also greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the interaction between the nose and rear paper clips has an effect. The p-value for $\beta_6$, which represents the interaction between the middle and rear paper clips, is `r round(summary(model)$coefficients[7,4], 3)`, which is also greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the interaction between the middle and rear paper clips has an effect. The p-value for $\beta_7$, which represents the interaction between all three paper clips, is `r round(summary(model)$coefficients[8,4], 3)`, which is also greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that all three paper clips have an effect.
+
+These are disappointing results. We see that if we do not adjust for the p-values, then the only statistically significant predictors are the paper clip on the nose and paper clip on the rear (`r round(summary(model)$coefficients[2,4], 3)` and `r round(summary(model)$coefficients[4,4], 3)`, respectively). However, after adjusting for the p-values, we see that all of them are not statistically significant. This is likely due to the small sample size and the large variability in the data, even though we did compute a power analysis. Perhaps we could have reached a smaller p-value if we had a larger sample size, or if we had more replicates. The appropriate response is to rerun the experiment; however, we can go ahead and analyze a reduced model without the interactions, as they are not statistically significant. This will allow us to see if the main effects are significant, and if we can draw any conclusions from the data.
+
+```{r}
+reduced <- lm(Distance ~ Nose + Middle + Rear, data = full)
+kable(summary(reduced)$coefficients, digits = 3)
+```
+Now, at a Bonferroni adjusted level of $\alpha = 0.05 / 3 \approx 0.01667$ for the three predictors (nose, middle, rear), we see that the p-value for the nose paper clip is `r round(summary(reduced)$coefficients[2,4], 3)`, which is less than the adjusted level. Therefore, we reject $H_0$ and say that there is statistically significant evidence that the nose paper clip has an effect. The p-value for the middle paper clip is `r round(summary(reduced)$coefficients[3,4], 3)`, which is greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the middle paper clip has an effect. The p-value for the rear paper clip is `r round(summary(reduced)$coefficients[4,4], 3)`, which is greater than the adjusted level. Therefore, we fail to reject $H_0$ and say that there is not statistically significant evidence that the rear paper clip has an effect. 
+
+So, we see that the only statistically significant predictor is the nose paper clip. This is consistent with our earlier analysis, where we saw that the nose paper clip had a positive effect on the distance. The middle and rear paper clips did not have a significant effect on the distance, which is also consistent with our earlier analysis. However, this should not serve as a substitute for the full model, as we are not accounting for the interactions between the factors. The full model is more appropriate, as it accounts for the interactions and gives us a better understanding of the data. This is only to show that the nose paper clip does have an impact on the distance, and that the middle and rear paper clips do not have a significant effect.
+
+Now, we need to conduct model checking. We've run our analysis with assumptions of normality, independence, and equal variance. Let's actually check that these assumptions hold.
+
+Normality:
+```{r, fig.show="hold", out.width="50%", message=FALSE}
+hist(model$residuals, xlab="residuals", main="Distance Residuals")
+qqnorm(model$residuals)
+qqline(model$residuals)
+
+shapiro_test <- shapiro.test(model$residuals)
+```
+Our data looks promising! The histogram looks quite normal, perhaps a bit skewed to the right, but not too much. The Q-Q plot also looks quite normal, with most of the points falling on the line. The outliers are questionable, but almost all are touching, if not on the line. The Shaprio-Wilk test gives us a p-value of `r round(shapiro_test$p.value, 3)`, which is greater than 0.05, meaning we fail to reject $H_0$ that the residuals are normally distributed. This is a good sign, as it means that our model is appropriate for the data.
+
+Equality of Variances:
+```{r}
+plot(model$residuals ~ model$fitted.values,
+xlab="fitted values", ylab="residuals", cex.lab=2,
+main="Residuals vs. fitted values", cex.main=2)
+```
+The data looks random. There are no clear patterns, and the residuals are scattered around zero, and vertical clustering is expected. 
+
+Structure to the Data
+```{r}
+x <- 1:length(model$residuals)
+plot(model$residuals ~ x, ylab="residuals", cex.lab=2,
+main="Residuals vs. order of data collection", cex.main=2)
+abline(h=0, col="red", lty=2)
+```
+The residuals are randomly scattered around zero, with no clear pattern. Given such a high p-value and our visualizations, we can conclude that our assumptions are met. 
+
+**Discussion**
+
+We conducted this study to understand how mass distribution affects flight distance of paper airplanes. We utilized a $2^3$ factorial design with three factors: Nose, Middle, and Rear, each with two levels (presence/absence) of a paper clip. After determining that we need seven replicates for at least 80\% power, we collected and analyzed our data. Our results were strong, but disappointing. We found that the model was statistically significant, with a p-value of `r round(with(summary(model), pf(fstatistic[1], fstatistic[2], fstatistic[3], lower.tail = FALSE)), 3)`, but none of the individual predictors, or their interactions were significant after adjusting for the Bonferroni correction. However, unadjusted p-values showed promise for Nose and Rear paper clip placement, but their p-values were greater than the Bonferroni adjusted level, at  `r round(summary(model)$coefficients[2,4], 3)` and `r round(summary(model)$coefficients[4,4], 3)`, respectively. Using a reduced model, we found that excluding interaction terms proved that the Nose paper clip was statistically significant, with a p-value of `r round(summary(reduced)$coefficients[2,4], 3)`. This aligns with fundamental physics (a heavier weight in the front of the plane will increase distance), and with previous studies (Cook, 2017). Our study is in line with the other research in this field. Campbell and Seacord (1943) found that mass distribution impacts aircraft stability, and Puspita et al. (2019), which did a similar study to ours, found that nose shape and weight affect distance. Our findings reflect this, where weight at the front improves distance. 
+
+However, there were a few limitations to this study. While theoretically justified through power calculations, the sample size may have been insufficient to detect smaller effect sizes, especially for interactions. Our plane is in question as well. There was psychical damage to the plane as the experiment progressed, which may have affected results, such as introducing drag. There could have been human error as well, as I was the one throwing the plane, and noticed how some throws felt like they were being thrown harder than others (perhaps a bias towards throwing the plane harder when the paper clip was on the front?). 
+
+Our assumptions were found to be satisfied, normality, independence, and equal variances were tested, and yielded a p-value of `r round(shapiro_test$p.value, 3)`, and our plots showed no visible patterns. However, a permutation test could be run to check if the p-values are significant, as a non-parametric test that does not assume normality or equal variance. This would be a good next step, as it would allow us to confirm our findings without relying on the assumptions of the linear model. 
+
+In practice, this study can be used to understand how mass distribution affects flight distance of paper airplanes, and can be applied to real-world aircraft design. To align with the real world, it would be interesting to conduct tests on other factors, such as wind/drag, throwing technique, or design of the airplane.
+
+**References**
+
+Campbell, John P., and Charles L. Seacord. The Effect of Mass Distribution on the Lateral Stability and Control Characteristics of an Airplane as Determined by Tests of a Model in the Free-Flight Tunnel. Vol. 769. US Government Printing Office, 1943.
+
+Cook, Natalia. "Experimental analysis of paper plane flight characteristics." (2017).
+
+Hasibuzzaman, Md, and Md Kamrul Hasan. "Analysis of Flight Characteristics of Paper Airplanes"
+
+Puspita, Angella Natalia Ghea, et al. "Effect of paper weight, paper length, and nose of paper plane on aircraft mileage in paper airplane game."
+
+
+A.I. Statement:
+
+I used ChatGPT to assist me with this assignment. I prompted it to help with the following sections:
+
+- Find relevant journal articles and summarize them
+
+- Generate the Python script for random permutations
+
+- Graph the power analysis results
+
+- Extracting $\beta$ values to inline text
+
+- Explain what to do due to underwhelming p-value results
