@@ -300,18 +300,3 @@ Cook, Natalia. "Experimental analysis of paper plane flight characteristics." (2
 Hasibuzzaman, Md, and Md Kamrul Hasan. "Analysis of Flight Characteristics of Paper Airplanes"
 
 Puspita, Angella Natalia Ghea, et al. "Effect of paper weight, paper length, and nose of paper plane on aircraft mileage in paper airplane game."
-
-
-A.I. Statement:
-
-I used ChatGPT to assist me with this assignment. I prompted it to help with the following sections:
-
-- Find relevant journal articles and summarize them
-
-- Generate the Python script for random permutations
-
-- Graph the power analysis results
-
-- Extracting $\beta$ values to inline text
-
-- Explain what to do due to underwhelming p-value results
