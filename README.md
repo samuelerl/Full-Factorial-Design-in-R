@@ -1,4 +1,4 @@
-# Factorial Design of Paper Airplanes
+# Factorial Design of Aircraft
 
 This repository contains a full factorial design study that examines how paper clip placement affects paper airplane flight distance. The primary analysis is written in R Markdown, supported by helper scripts for design randomization and power estimation.
 
